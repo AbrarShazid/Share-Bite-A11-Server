@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const app = express();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const port = process.env.PORT || 5000;
 
@@ -56,20 +56,27 @@ async function run() {
 
     app.get("/available-food", async (req, res) => {
       try {
-          const { sort } = req.query;
-    let sortOption = {};
-    
-    if (sort === 'expire-asc') {
-      sortOption = { expire: 1 }; // Ascending 
-    } else if (sort === 'expire-desc') {
-      sortOption = { expire: -1 }; // Descending (
-    }
-    
-    const allfoods = await foodCollection.find().sort(sortOption).toArray();
-    res.send(allfoods);
+        const { sort } = req.query;
+        let sortOption = {};
+
+        if (sort === "expire-asc") {
+          sortOption = { expire: 1 }; // Ascending
+        } else if (sort === "expire-desc") {
+          sortOption = { expire: -1 }; // Descending (
+        }
+
+        const allfoods = await foodCollection.find().sort(sortOption).toArray();
+        res.send(allfoods);
       } catch (error) {
         res.status(500).send({ error: "Failed to fetch featured foods." });
       }
+    });
+    // food details
+    app.get("/food-details/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const result = await foodCollection.findOne({ _id: new ObjectId(id) });
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
