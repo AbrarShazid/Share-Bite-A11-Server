@@ -35,24 +35,42 @@ async function run() {
       const result = await foodCollection.insertOne(food);
       res.send(result);
     });
-    // 6 food item for feature 
 
-app.get("/featured-foods", async (req, res) => {
-  try {
-    const featuredFoods = await foodCollection
-      .find()
-      .sort({ quantity: -1 }) // descending order
-      .limit(6)
-      .toArray();
+    // 6 food item for feature
 
-    res.send(featuredFoods);
-  } catch (error) {
-    res.status(500).send({ error: "Failed to fetch featured foods." });
-  }
-});
+    app.get("/featured-foods", async (req, res) => {
+      try {
+        const featuredFoods = await foodCollection
+          .find()
+          .sort({ quantity: -1 })
+          .limit(6)
+          .toArray();
 
+        res.send(featuredFoods);
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch featured foods." });
+      }
+    });
 
+    // all available food
 
+    app.get("/available-food", async (req, res) => {
+      try {
+          const { sort } = req.query;
+    let sortOption = {};
+    
+    if (sort === 'expire-asc') {
+      sortOption = { expire: 1 }; // Ascending 
+    } else if (sort === 'expire-desc') {
+      sortOption = { expire: -1 }; // Descending (
+    }
+    
+    const allfoods = await foodCollection.find().sort(sortOption).toArray();
+    res.send(allfoods);
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch featured foods." });
+      }
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
