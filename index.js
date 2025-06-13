@@ -42,7 +42,7 @@ async function run() {
     app.get("/featured-foods", async (req, res) => {
       try {
         const featuredFoods = await foodCollection
-          .find({availability:"Available"})
+          .find({ availability: "Available" })
           .sort({ quantity: -1 })
           .limit(6)
           .toArray();
@@ -66,7 +66,10 @@ async function run() {
           sortOption = { expire: -1 }; // Descending (
         }
 
-        const allfoods = await foodCollection.find({availability:"Available"}).sort(sortOption).toArray();
+        const allfoods = await foodCollection
+          .find({ availability: "Available" })
+          .sort(sortOption)
+          .toArray();
         res.send(allfoods);
       } catch (error) {
         res.status(500).send({ error: "Failed to fetch featured foods." });
@@ -96,28 +99,42 @@ async function run() {
       }
     });
 
+    // individual data fetch by mail
 
-      // individual data fetch by mail 
+    app.get("/mydata/:mail", async (req, res) => {
+      const userMail = req.params.mail;
+      const result = await foodCollection
+        .find({ userEmail: userMail })
+        .toArray();
+      res.send(result);
+    });
 
-      app.get("/mydata/:mail",async(req,res)=>{
+    // delete data
+    app.delete("/foods/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await foodCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
 
-        const userMail=req.params.mail
-        const result=await foodCollection.find({userEmail:userMail}).toArray()
-        res.send(result);
+    // update data fully
 
-      })
+    app.put("/foods/:id", async (req, res) => {
 
+      const id=req.params.id
+      const update=req.body
+      try{
+        const result=await foodCollection.updateOne(
+          {_id:new ObjectId(id)},
+          {$set:update}
 
-      // delete data 
-      app.delete("/foods/:id",async(req,res)=>{
-          const id=req.params.id
-          const result=await foodCollection.deleteOne({_id:new ObjectId(id)})
-          res.send(result)
+        );
+        res.send(result)
+      }
+      catch(error){
+        res.status(500).send({ error: "Failed to update food item" });
+      }
 
-
-      })
-
-
+    });
 
     // --------------------------------------------->>>>> food request api <<<<-----------------------------------------------
 
