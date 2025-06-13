@@ -96,6 +96,29 @@ async function run() {
       }
     });
 
+
+      // individual data fetch by mail 
+
+      app.get("/mydata/:mail",async(req,res)=>{
+
+        const userMail=req.params.mail
+        const result=await foodCollection.find({userEmail:userMail}).toArray()
+        res.send(result);
+
+      })
+
+
+      // delete data 
+      app.delete("/foods/:id",async(req,res)=>{
+          const id=req.params.id
+          const result=await foodCollection.deleteOne({_id:new ObjectId(id)})
+          res.send(result)
+
+
+      })
+
+
+
     // --------------------------------------------->>>>> food request api <<<<-----------------------------------------------
 
     // post
