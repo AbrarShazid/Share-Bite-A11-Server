@@ -28,6 +28,7 @@ async function run() {
     await client.connect();
 
     const foodCollection = client.db("ShareBite").collection("foods");
+    const requestCollection = client.db("ShareBite").collection("foodRequest");
 
     // api
     app.post("/foods", async (req, res) => {
@@ -78,6 +79,42 @@ async function run() {
       const result = await foodCollection.findOne({ _id: new ObjectId(id) });
       res.send(result);
     });
+
+
+
+    // change status after request  
+
+   app.patch("/status-change/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await foodCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { availability: "Requested" } }
+    );
+
+    res.send( result );
+  } catch (error) {
+ 
+    res.status(500).send();
+  }
+});
+
+
+
+
+
+    // --------------------------------------------->>>>> food request api <<<<-----------------------------------------------
+
+    // post 
+    app.post("/requestFood",async (req,res)=>{
+      const request=req.body
+      const result=await requestCollection.insertOne(request)
+      res.send(result);
+
+
+    })
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
