@@ -42,7 +42,7 @@ async function run() {
     app.get("/featured-foods", async (req, res) => {
       try {
         const featuredFoods = await foodCollection
-          .find()
+          .find({availability:"Available"})
           .sort({ quantity: -1 })
           .limit(6)
           .toArray();
@@ -66,7 +66,7 @@ async function run() {
           sortOption = { expire: -1 }; // Descending (
         }
 
-        const allfoods = await foodCollection.find().sort(sortOption).toArray();
+        const allfoods = await foodCollection.find({availability:"Available"}).sort(sortOption).toArray();
         res.send(allfoods);
       } catch (error) {
         res.status(500).send({ error: "Failed to fetch featured foods." });
@@ -80,41 +80,30 @@ async function run() {
       res.send(result);
     });
 
+    // change status after request
 
+    app.patch("/status-change/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await foodCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { availability: "Requested" } }
+        );
 
-    // change status after request  
-
-   app.patch("/status-change/:id", async (req, res) => {
-  try {
-    const id = req.params.id;
-    const result = await foodCollection.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: { availability: "Requested" } }
-    );
-
-    res.send( result );
-  } catch (error) {
- 
-    res.status(500).send();
-  }
-});
-
-
-
-
+        res.send(result);
+      } catch (error) {
+        res.status(500).send();
+      }
+    });
 
     // --------------------------------------------->>>>> food request api <<<<-----------------------------------------------
 
-    // post 
-    app.post("/requestFood",async (req,res)=>{
-      const request=req.body
-      const result=await requestCollection.insertOne(request)
+    // post
+    app.post("/requestFood", async (req, res) => {
+      const request = req.body;
+      const result = await requestCollection.insertOne(request);
       res.send(result);
-
-
-    })
-
-
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
