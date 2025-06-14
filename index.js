@@ -145,6 +145,17 @@ async function run() {
       res.send(result);
     });
 
+    // fetch requested food 
+    app.get("/myReqFood/:mail",async (req,res)=>{
+      const mail=req.params.mail
+      const result=await requestCollection.find({userEmail:mail}).toArray()
+      res.send(result)
+
+
+
+    })
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
