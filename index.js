@@ -57,8 +57,13 @@ async function run() {
 
     app.get("/available-food", async (req, res) => {
       try {
-        const { sort } = req.query;
+        const { sort, search } = req.query;
         let sortOption = {};
+        let filter = { availability: "Available" }; 
+
+        if (search) {
+          filter.name = { $regex: search, $options: "i" };
+        }
 
         if (sort === "expire-asc") {
           sortOption = { expire: 1 }; // Ascending
@@ -67,7 +72,7 @@ async function run() {
         }
 
         const allfoods = await foodCollection
-          .find({ availability: "Available" })
+          .find(filter)
           .sort(sortOption)
           .toArray();
         res.send(allfoods);
@@ -119,21 +124,17 @@ async function run() {
     // update data fully
 
     app.put("/foods/:id", async (req, res) => {
-
-      const id=req.params.id
-      const update=req.body
-      try{
-        const result=await foodCollection.updateOne(
-          {_id:new ObjectId(id)},
-          {$set:update}
-
+      const id = req.params.id;
+      const update = req.body;
+      try {
+        const result = await foodCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: update }
         );
-        res.send(result)
-      }
-      catch(error){
+        res.send(result);
+      } catch (error) {
         res.status(500).send({ error: "Failed to update food item" });
       }
-
     });
 
     // --------------------------------------------->>>>> food request api <<<<-----------------------------------------------
@@ -145,16 +146,14 @@ async function run() {
       res.send(result);
     });
 
-    // fetch requested food 
-    app.get("/myReqFood/:mail",async (req,res)=>{
-      const mail=req.params.mail
-      const result=await requestCollection.find({userEmail:mail}).toArray()
-      res.send(result)
-
-
-
-    })
-
+    // fetch requested food
+    app.get("/myReqFood/:mail", async (req, res) => {
+      const mail = req.params.mail;
+      const result = await requestCollection
+        .find({ userEmail: mail })
+        .toArray();
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
