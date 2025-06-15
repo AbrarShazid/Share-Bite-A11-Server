@@ -3,13 +3,42 @@ const cors = require("cors");
 const app = express();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
+const admin = require("firebase-admin");
+
+
+const decoded=Buffer.from(process.env.FB_SERVICE_KEY,'base64').toString('utf8')
+const  serviceAccount = JSON.parse(decoded);
+
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+// middleware
+app.use(
+  cors({
+    origin: ["http://localhost:5173","https://share-bite-a11.vercel.app"],
+    credentials: true,
+  })
+);
+app.use(express.json());
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers?.authorization;
+  const token = authHeader.split(" ")[1];
+  if (!token) return res.status(401).send("Unauthorized");
+
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(403).send("Forbidden");
+  }
+};
+
 const port = process.env.PORT || 5000;
 
 require("dotenv").config();
-
-// middleware
-app.use(cors());
-app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@shazid.sdvbyar.mongodb.net/?retryWrites=true&w=majority&appName=Shazid`;
 
@@ -25,13 +54,13 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const foodCollection = client.db("ShareBite").collection("foods");
     const requestCollection = client.db("ShareBite").collection("foodRequest");
 
     // api
-    app.post("/foods", async (req, res) => {
+    app.post("/foods", verifyToken, async (req, res) => {
       const food = req.body;
       const result = await foodCollection.insertOne(food);
       res.send(result);
@@ -59,7 +88,7 @@ async function run() {
       try {
         const { sort, search } = req.query;
         let sortOption = {};
-        let filter = { availability: "Available" }; 
+        let filter = { availability: "Available" };
 
         if (search) {
           filter.name = { $regex: search, $options: "i" };
@@ -81,7 +110,7 @@ async function run() {
       }
     });
     // food details
-    app.get("/food-details/:id", async (req, res) => {
+    app.get("/food-details/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
 
       const result = await foodCollection.findOne({ _id: new ObjectId(id) });
@@ -90,7 +119,7 @@ async function run() {
 
     // change status after request
 
-    app.patch("/status-change/:id", async (req, res) => {
+    app.patch("/status-change/:id", verifyToken, async (req, res) => {
       try {
         const id = req.params.id;
         const result = await foodCollection.updateOne(
@@ -106,7 +135,7 @@ async function run() {
 
     // individual data fetch by mail
 
-    app.get("/mydata/:mail", async (req, res) => {
+    app.get("/mydata/:mail", verifyToken, async (req, res) => {
       const userMail = req.params.mail;
       const result = await foodCollection
         .find({ userEmail: userMail })
@@ -115,7 +144,7 @@ async function run() {
     });
 
     // delete data
-    app.delete("/foods/:id", async (req, res) => {
+    app.delete("/foods/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const result = await foodCollection.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
@@ -123,7 +152,7 @@ async function run() {
 
     // update data fully
 
-    app.put("/foods/:id", async (req, res) => {
+    app.put("/foods/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const update = req.body;
       try {
@@ -140,15 +169,20 @@ async function run() {
     // --------------------------------------------->>>>> food request api <<<<-----------------------------------------------
 
     // post
-    app.post("/requestFood", async (req, res) => {
+    app.post("/requestFood", verifyToken, async (req, res) => {
       const request = req.body;
       const result = await requestCollection.insertOne(request);
       res.send(result);
     });
 
     // fetch requested food
-    app.get("/myReqFood/:mail", async (req, res) => {
-      const mail = req.params.mail;
+    app.get("/myReqFood", verifyToken, async (req, res) => {
+      const mail = req.user.email;
+
+      if (!mail) {
+        return res.status(400).send({ error: "User email not found in token" });
+      }
+
       const result = await requestCollection
         .find({ userEmail: mail })
         .toArray();
@@ -156,10 +190,10 @@ async function run() {
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
